@@ -1,3 +1,5 @@
+# up until line 160 is messing with the data and visualizations
+# after 160 is the actual data cleaning
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -163,20 +165,28 @@ if df is not None:
             counts.columns = ['Response', 'Count']
             st.dataframe(counts, use_container_width=True)
 
-# data cleaning based on state abortion legality and rish assesment 
+#DATA CLEANING BEGINS!
+# data cleaning based on state abortion legality and risk assesment 
 df_full = pd.read_csv('providerSurvey.csv')
 
-df_data = df_full.iloc[1:].copy()
+df_data = df_full.iloc[1:].copy() #exlcude first row because its questions
 df_data.reset_index(drop=True, inplace=True)
 
 initial_count = len(df_data)
 
 # exclude null
+# Q8: Think about the primary setting where you provide reproductive care. What abortion services, if any, do they provide? Select all that apply.
 n_before_q8 = len(df_data)
-df_data = df_data.dropna(subset=['Q8'])
+
+dropped_q8_df = df_data[df_data['Q8'].notnull()]
+
+df_data = df_data.dropna(subset=['Q8']) #Q8 is the first question that participants need to answer when they are officially in the survey
+#so, if we drop all the participants who didnt answer this question, we are left with only valid responses
 n_after_q8 = len(df_data)
 dropped_q8 = n_before_q8 - n_after_q8
 
+print(dropped_q8_df)
+dropped_q8_df.to_csv('providerSurvey_dropped_q8', index=False)
 
 # Defines abortion legality terms
 RISK_LEGAL = 'Abortion is fully legal with no major bans or restrictions'
@@ -268,6 +278,13 @@ def check_risk_importance(row):
 n_before_align = len(df_data)
 
 df_data['alignment_pass'] = df_data.apply(check_state_alignment, axis=1)
+
+#csv for values dropped because of an incorect state-legality pairing
+df_state_misaligned = df_data[~df_data['alignment_pass']].copy()
+df_state_misaligned.to_csv(
+    'providerSurvey_dropped_state_alignment.csv',
+    index=False
+)
 
 df_aligned = df_data[df_data['alignment_pass']].copy()
 n_after_align = len(df_aligned)
